@@ -24,13 +24,14 @@ world[1][1] = 5
 
 print(world)
 
-def groundVertices(size, basez, world):
+def groundVertices(size, basez, world, deleteoldboxes=False):
 	vertices = []
+	boxes = []
 	
 	halfsize = int(math.floor(size/2.0))
 	
-	for x in range(0,size):
-		for y in range(0, size):
+	for x in range(-halfsize, halfsize):
+		for y in range(-halfsize, halfsize):
 			vertices.append((4*x, 4*y, basez + world[x][y]))
 			vertices.append((4*x + 4, 4*y, basez + world[x + 1][y]))
 			vertices.append((4*x, 4*y + 4, basez + world[x][y + 1]))
@@ -38,8 +39,16 @@ def groundVertices(size, basez, world):
 			vertices.append((4*x + 4, 4*y + 4, basez + world[x + 1][y + 1]))
 			vertices.append((4*x + 4, 4*y, basez + world[x + 1][y]))
 			vertices.append((4*x, 4*y + 4, basez + world[x][y + 1]))
+			
+			if deleteoldboxes:
+				shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
+				boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[x][y]+basez],[0,0,0])
+				boxes.append(boxId)
 	
-	return vertices
+	if deleteoldboxes:
+		return boxes
+	else:
+		return vertices
 
 def createCube(pos, size=1, orn=[0,0,0]):
 	cubeStartOrientation = pybullet.getQuaternionFromEuler(orn)
@@ -158,7 +167,7 @@ def reset_camera():
 	cameraz = -2
 	
 	glLoadIdentity()
-	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 50.0)
+	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
 	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),-4, 0,0,1)
 	return yaw, camerax, cameray, cameraz
 
@@ -167,14 +176,16 @@ yaw, camerax, cameray, cameraz = reset_camera()
 
 glEnable(GL_DEPTH_TEST)
 
-createCube([0,5,0], 1, [0,0,45])
-createCube([1,4,0.2], 1, [0,0,30])
-#createCube([3,8,-6], 2, [40,0,0])
+createCube([0,12,0], 1, [0,0,45])
+createCube([4,4,6], 1, [0,0,0])
+createCube([4,5.9,9], 2, [0,0,0])
 
 glClearColor(0.5, 0.6, 1.0, 0.0);
 
 walkspeed = 0.5
 turnspeed = 0.03
+
+boxestodelete = groundVertices(6, -9, world, True) # We run this once to initiate the first collision boxes.
 
 while True:
 	for event in pygame.event.get():
@@ -196,7 +207,7 @@ while True:
 				yaw, camerax, cameray, cameraz = reset_camera()
 	
 	glLoadIdentity()
-	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 50.0)
+	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
 	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),cameraz, 0,0,1)
 	
 	# Step Physics Simulation
