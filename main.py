@@ -18,15 +18,19 @@ world = []
 for x in range(0,10):
 	world.append([])
 	for y in range(0,10):
-		world[x].append(random.randint(0,2))
+		world[x].append(random.randint(0,1))
 
 world[1][1] = 5
 
 print(world)
 
-def groundVertices(size, basez, world, deleteoldboxes=False):
+def groundVertices(size, basez, world, deleteoldboxes=False, deleteids=[]):
 	vertices = []
 	boxes = []
+	
+	if deleteoldboxes and deleteids != []:
+		for box in deleteids:
+			pybullet.removeBody(box)
 	
 	halfsize = int(math.floor(size/2.0))
 	
@@ -185,7 +189,7 @@ glClearColor(0.5, 0.6, 1.0, 0.0);
 walkspeed = 0.5
 turnspeed = 0.03
 
-boxestodelete = groundVertices(6, -9, world, True) # We run this once to initiate the first collision boxes.
+boxestodelete = groundVertices(8, -9, world, True) # We run this once to initiate the first collision boxes.
 
 while True:
 	for event in pygame.event.get():
@@ -205,6 +209,8 @@ while True:
 				cameray -= math.sin(yaw) * walkspeed
 			if pygame.key.get_pressed()[pygame.K_SPACE]:
 				yaw, camerax, cameray, cameraz = reset_camera()
+			if pygame.key.get_pressed()[pygame.K_q]:
+				boxestodelete = groundVertices(8, -9, world, True, boxestodelete)
 	
 	glLoadIdentity()
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
@@ -213,7 +219,7 @@ while True:
 	# Step Physics Simulation
 	pybullet.stepSimulation()
 	
-	groundpoints = groundVertices(6, -9, world)
+	groundpoints = groundVertices(8, -9, world)
 	
 	for vertex in groundpoints:
 		render_vertices.append(vertex)
@@ -251,6 +257,7 @@ while True:
 	glEnd()
 	
 	# Empty Vertex List
+	print("Triangles Drawn: ", len(render_vertices)/3)
 	render_vertices = []
 	colors = []
 	
