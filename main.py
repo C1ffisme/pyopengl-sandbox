@@ -224,19 +224,21 @@ while True:
 			pygame.quit()
 			quit()
 		elif event.type == pygame.KEYDOWN:
-			if pygame.key.get_pressed()[pygame.K_LEFT]:
+			pressed_keys = pygame.key.get_pressed()
+			
+			if pressed_keys[pygame.K_LEFT]:
 				yaw += turnspeed
-			elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+			elif pressed_keys[pygame.K_RIGHT]:
 				yaw -= turnspeed
-			if pygame.key.get_pressed()[pygame.K_UP]:
+			if pressed_keys[pygame.K_UP]:
 				camerax += math.cos(yaw) * walkspeed 
 				cameray += math.sin(yaw) * walkspeed
-			elif pygame.key.get_pressed()[pygame.K_DOWN]:
+			elif pressed_keys[pygame.K_DOWN]:
 				camerax -= math.cos(yaw) * walkspeed
 				cameray -= math.sin(yaw) * walkspeed
-			if pygame.key.get_pressed()[pygame.K_SPACE]:
+			if pressed_keys[pygame.K_SPACE]:
 				yaw, camerax, cameray, cameraz = reset_camera()
-			if pygame.key.get_pressed()[pygame.K_q]:
+			if pressed_keys[pygame.K_q]:
 				boxestodelete = groundVertices(8, -9, world, True, boxestodelete)
 	
 	glLoadIdentity()
