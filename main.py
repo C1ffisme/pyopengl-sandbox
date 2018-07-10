@@ -1,3 +1,5 @@
+#!/usr/local/bin/python
+
 import pybullet
 import time
 import pybullet_data
@@ -13,18 +15,31 @@ cubes = []
 render_vertices = []
 colors = []
 
-world = []
+def worldGen(size, amplitude=1):
+	"""Temporary worldgen function. Will be replaced later with something
+	that actually looks nice. Takes size and noise amplitude and returns
+	world vertices for use in other functions."""
+	world = []
+	
+	for x in range(0,size):
+		world.append([])
+		for y in range(0,size):
+			world[x].append(random.randint(0,amplitude))
+	
+	return world
+			
+world = worldGen(10)
 
-for x in range(0,10):
-	world.append([])
-	for y in range(0,10):
-		world[x].append(random.randint(0,1))
-
+# Temporary line to test world rendering.
 world[1][1] = 5
 
 print(world)
 
 def groundVertices(size, basez, world, deleteoldboxes=False, deleteids=[]):
+	"""This is a function which takes a set of vertices, the size of the
+	 desired square and base z and returns the triangles for OpenGL to render.
+	 
+	 It also creates the collision shape for the terrain."""
 	vertices = []
 	boxes = []
 	
@@ -55,6 +70,8 @@ def groundVertices(size, basez, world, deleteoldboxes=False, deleteids=[]):
 		return vertices
 
 def createCube(pos, size=1, orn=[0,0,0]):
+	"""This function creates a cube using the size of the cube, 
+	the position and the orientation in euler rotation."""
 	cubeStartOrientation = pybullet.getQuaternionFromEuler(orn)
 
 	shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[size,size,size])
@@ -63,6 +80,8 @@ def createCube(pos, size=1, orn=[0,0,0]):
 	cubes.append([boxId,size])
 
 def cubeVertices(pos, size, orn):
+	"""This function gives the triangles for OpenGL to render a cube given
+	the position, size of the cube and euler rotation."""
 	vertices = []
 	
 	cubex = pos[0]
@@ -154,17 +173,25 @@ def cubeVertices(pos, size, orn):
 physicsClient = pybullet.connect(pybullet.DIRECT)
 pybullet.setGravity(0,0,-10)
 
-pybullet.createCollisionShape(pybullet.GEOM_PLANE)
-pybullet.createMultiBody(0,0,-1,[0,0,-9])
+# Create a plane to stop our cubes from falling into infinity. (Temporary?)
+plane = pybullet.createCollisionShape(pybullet.GEOM_PLANE)
+pybullet.createMultiBody(0,plane,-1,[0,0,-9])
 
 # Initialize a Pygame window showing OpenGL
 pygame.init()
 display = (1200, 720)
 pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+
+# Allow keys to be held down.
 pygame.key.set_repeat(1, 2)
 
 # gluLookAt takes 9 arguments, the camera position, the lookat position and the up vector. (Just set that to all zeroes except for a 1 for the position that is upwards)
+# gluLookAt multiplies the current vector rather than changing the camera vector because PyOpenGL is stupid. Use glLoadIdentity() to stop this.
+
 def reset_camera():
+	"""Resets the camera to the start position. Returns Yaw and Camera Position."""
+	
+	# These numbers have no significance other than just being near where the cubes and terrain are rendered. (At the Origin)
 	yaw = 0.0
 	camerax = -3
 	cameray = 1
@@ -257,7 +284,6 @@ while True:
 	glEnd()
 	
 	# Empty Vertex List
-	print("Triangles Drawn: ", len(render_vertices)/3)
 	render_vertices = []
 	colors = []
 	
