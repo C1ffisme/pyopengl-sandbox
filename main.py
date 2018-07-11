@@ -4,12 +4,16 @@ import pybullet
 import time
 import pybullet_data
 import math, random
+import sys
 
 import OpenGL
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+
+sys.path.append("render/")
+import cubeRender
 
 cubes = []
 render_vertices = []
@@ -69,106 +73,6 @@ def groundVertices(size, basez, world, deleteoldboxes=False, deleteids=[]):
 	else:
 		return vertices
 
-def createCube(pos, size=1, orn=[0,0,0]):
-	"""This function creates a cube using the size of the cube, 
-	the position and the orientation in euler rotation."""
-	cubeStartOrientation = pybullet.getQuaternionFromEuler(orn)
-
-	shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[size,size,size])
-	boxId = pybullet.createMultiBody(1,shape,-1,pos,cubeStartOrientation)
-	
-	cubes.append([boxId,size])
-
-def cubeVertices(pos, size, orn):
-	"""This function gives the triangles for OpenGL to render a cube given
-	the position, size of the cube and euler rotation."""
-	vertices = []
-	
-	cubex = pos[0]
-	cubey = pos[1]
-	cubez = pos[2]
-	
-	# Bottom Face
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	
-	# Top Face
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	
-	# X+ Face
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	
-	# X- Face
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	
-	# Y+ Face
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (1*size)+cubey, (-1*size)+cubez))
-	
-	# Y- Face
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (1*size)+cubez))
-	vertices.append(((-1*size)+cubex, (-1*size)+cubey, (-1*size)+cubez))
-	
-	euler = pybullet.getEulerFromQuaternion(orn)
-	
-	if euler[2] != 0:
-		xrot = euler[0]
-		yrot = euler[1]
-		zrot = euler[2]
-		
-		i = 0
-		for vertex in vertices:
-			x = vertex[0] - cubex
-			y = vertex[1] - cubey
-			z = vertex[2] - cubez
-			
-			# Z Rotation
-			levelonex = ((math.cos(zrot)*x) - (math.sin(zrot)*y))
-			leveloney = ((math.sin(zrot)*x) + (math.cos(zrot)*y))
-			levelonez = z # Consistency
-			
-			# Y Rotation
-			leveltwox = ((math.cos(yrot)*levelonex) - (math.sin(yrot)*levelonez))
-			leveltwoy = leveloney
-			leveltwoz = ((math.sin(yrot)*levelonex) + (math.cos(yrot)*levelonez))
-			
-			# X Rotation
-			levelthreex = leveltwox + cubex
-			levelthreey = ((math.cos(xrot)*leveltwoy) - (math.sin(xrot)*leveltwoz)) + cubey
-			levelthreez = ((math.sin(xrot)*leveltwoy) + (math.cos(xrot)*leveltwoz)) + cubez
-			
-			vertices[i] = (levelthreex, levelthreey, levelthreez)
-			i += 1
-	
-	return vertices
-
 # Initialize Physics Engine. We use pybullet.DIRECT since we are not using pybullet's GUI rendering system.
 physicsClient = pybullet.connect(pybullet.DIRECT)
 pybullet.setGravity(0,0,-10)
@@ -207,9 +111,9 @@ yaw, camerax, cameray, cameraz = reset_camera()
 
 glEnable(GL_DEPTH_TEST)
 
-createCube([0,12,0], 1, [0,0,45])
-createCube([4,4,6], 1, [0,0,0])
-createCube([4,5.9,9], 2, [0,0,0])
+cubes.append(cubeRender.createCube([0,12,0], 1, [0,0,45]))
+cubes.append(cubeRender.createCube([4,4,6], 1, [0,0,0]))
+cubes.append(cubeRender.createCube([4,5.9,9], 2, [0,0,0]))
 
 glClearColor(0.5, 0.6, 1.0, 0.0);
 
@@ -264,7 +168,7 @@ while True:
 		
 		cubePos, cubeOrn = pybullet.getBasePositionAndOrientation(cubeId)
 		
-		cubepoints = cubeVertices(cubePos, size, cubeOrn)
+		cubepoints = cubeRender.cubeVertices(cubePos, size, cubeOrn)
 		
 		for vertex in cubepoints:
 			render_vertices.append(vertex)

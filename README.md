@@ -16,4 +16,4 @@ REQUIREMENTS:
 - PyOpenGL (`pip install PyOpenGL`)
 - PyBullet (`pip install pybullet`)
 - PyGame (`pip install pygame`)
-- The time, math and random libraries which come with Python by default.
+- The time, math, sys and random libraries which come with Python by default.
