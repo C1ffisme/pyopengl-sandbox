@@ -12,66 +12,20 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-sys.path.append("render/")
-import cubeRender
+import render.cubeRender as cubeRender
+import render.worldRender as worldRender
+import world.worldGen as worldGen
 
 cubes = []
 render_vertices = []
 colors = []
-
-def worldGen(size, amplitude=1):
-	"""Temporary worldgen function. Will be replaced later with something
-	that actually looks nice. Takes size and noise amplitude and returns
-	world vertices for use in other functions."""
-	world = []
-	
-	for x in range(0,size):
-		world.append([])
-		for y in range(0,size):
-			world[x].append(random.randint(0,amplitude))
-	
-	return world
 			
-world = worldGen(10)
+world = worldGen.worldGen(10)
 
 # Temporary line to test world rendering.
 world[1][1] = 5
 
 print(world)
-
-def groundVertices(size, basez, world, deleteoldboxes=False, deleteids=[]):
-	"""This is a function which takes a set of vertices, the size of the
-	 desired square and base z and returns the triangles for OpenGL to render.
-	 
-	 It also creates the collision shape for the terrain."""
-	vertices = []
-	boxes = []
-	
-	if deleteoldboxes and deleteids != []:
-		for box in deleteids:
-			pybullet.removeBody(box)
-	
-	halfsize = int(math.floor(size/2.0))
-	
-	for x in range(-halfsize, halfsize):
-		for y in range(-halfsize, halfsize):
-			vertices.append((4*x, 4*y, basez + world[x][y]))
-			vertices.append((4*x + 4, 4*y, basez + world[x + 1][y]))
-			vertices.append((4*x, 4*y + 4, basez + world[x][y + 1]))
-			
-			vertices.append((4*x + 4, 4*y + 4, basez + world[x + 1][y + 1]))
-			vertices.append((4*x + 4, 4*y, basez + world[x + 1][y]))
-			vertices.append((4*x, 4*y + 4, basez + world[x][y + 1]))
-			
-			if deleteoldboxes:
-				shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
-				boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[x][y]+basez],[0,0,0])
-				boxes.append(boxId)
-	
-	if deleteoldboxes:
-		return boxes
-	else:
-		return vertices
 
 # Initialize Physics Engine. We use pybullet.DIRECT since we are not using pybullet's GUI rendering system.
 physicsClient = pybullet.connect(pybullet.DIRECT)
@@ -120,7 +74,7 @@ glClearColor(0.5, 0.6, 1.0, 0.0);
 walkspeed = 0.5
 turnspeed = 0.03
 
-boxestodelete = groundVertices(8, -9, world, True) # We run this once to initiate the first collision boxes.
+boxestodelete = worldGen.resetWorldBoxes(8, -9, world) # We run this once to initiate the first collision boxes.
 
 while True:
 	for event in pygame.event.get():
@@ -143,7 +97,7 @@ while True:
 			if pressed_keys[pygame.K_SPACE]:
 				yaw, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
-				boxestodelete = groundVertices(8, -9, world, True, boxestodelete)
+				boxestodelete = worldGen.resetWorldBoxes(8, -9, world, boxestodelete)
 	
 	glLoadIdentity()
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
@@ -152,7 +106,7 @@ while True:
 	# Step Physics Simulation
 	pybullet.stepSimulation()
 	
-	groundpoints = groundVertices(8, -9, world)
+	groundpoints = worldRender.groundVertices(8, -9, world)
 	
 	for vertex in groundpoints:
 		render_vertices.append(vertex)
