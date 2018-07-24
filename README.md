@@ -17,3 +17,4 @@ REQUIREMENTS:
 - PyBullet (`pip install pybullet`)
 - PyGame (`pip install pygame`)
 - The time, math, sys and random libraries which come with Python by default.
+- Numpy (`pip install numpy`)
