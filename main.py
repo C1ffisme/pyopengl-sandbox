@@ -5,12 +5,14 @@ import time
 import pybullet_data
 import math, random
 import sys
+import numpy
 
 import OpenGL
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GL import shaders
 
 import render.cubeRender as cubeRender
 import render.worldRender as worldRender
@@ -19,8 +21,12 @@ import world.worldGen as worldGen
 cubes = []
 render_vertices = []
 colors = []
-			
-world = worldGen.worldGen(10)
+
+vertex_array = numpy.array([], numpy.float32)
+color_array = numpy.array([], numpy.float32)
+
+worldsize = 13
+world = worldGen.worldGen(worldsize)
 
 # Temporary line to test world rendering.
 world[1][1] = 5
@@ -48,7 +54,7 @@ def setup_world():
 	cubes.append(cubeRender.createCube([4,4,6], 1, [0,0,0]))
 	cubes.append(cubeRender.createCube([4,5.9,9], 2, [0,0,0]))
 	
-	boxestodelete = worldGen.resetWorldBoxes(8, -9, world) # We run this once to initiate the first collision boxes.
+	boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world) # We run this once to initiate the first collision boxes.
 
 def reset_camera():
 	"""Resets the camera to the start position. Returns Yaw and Camera Position."""
@@ -68,25 +74,73 @@ def reset_camera():
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
 	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),-4, 0,0,1)
 	return yaw, camerax, cameray, cameraz
-	
 
-def render_loop(vertex_data, color_data):
-	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+def create_program():
+	VERTEX_SHADER = """ 
+		attribute vec3 a_Position;
+		attribute vec3 a_Color;
+
+		varying vec4 v_Color;
+
+		void main()
+		{
+			v_Color = vec4(a_Color, 1.0);
+			gl_Position = gl_ModelViewMatrix * vec4(a_Position, 1.0);
+		}
+		"""
+
+	FRAGMENT_SHADER = """
+		varying vec4 v_Color;
+
+		void main()
+		{
+			gl_FragColor = v_Color;
+		}
+		"""
 	
-	glBegin(GL_TRIANGLES)
+	vertshader = shaders.compileShader(VERTEX_SHADER, GL_VERTEX_SHADER)
+	fragshader = shaders.compileShader(FRAGMENT_SHADER, GL_FRAGMENT_SHADER)
+
+	program = glCreateProgram()
+	glAttachShader(program, vertshader)
+	glAttachShader(program, fragshader)
+	
+	glLinkProgram(program)
+	
+	return program
+
+def update_vertex_arrays(vertex_data, color_data, program):
+	global vertex_array
+	global color_array
 	
 	i = 0
 	for vertex in vertex_data:
-		glColor3fv(color_data[i])
-		glVertex3fv(vertex)
+		color_array = numpy.append(color_array, [colors[i][0],colors[i][1],colors[i][2]])
+		vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
 		i+=1
 	
-	glEnd()
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_array)
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, color_array)
+
+	glEnableVertexAttribArray(0)
+	glEnableVertexAttribArray(1)
+
+	glBindAttribLocation(program, 0, "a_Position")
+	glBindAttribLocation(program, 1, "a_Color")
+	
+	return len(vertex_array)/3
+
+def render_loop(program, numtriangles):
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+	
+	glUseProgram(program)
+	glDrawArrays(GL_TRIANGLES, 0, numtriangles)
 	
 
 init_libs()
 setup_world()
 yaw, camerax, cameray, cameraz = reset_camera()
+program = create_program()
 
 walkspeed = 0.5
 turnspeed = 0.03
@@ -112,7 +166,7 @@ while True:
 			if pressed_keys[pygame.K_SPACE]:
 				yaw, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
-				boxestodelete = worldGen.resetWorldBoxes(8, -9, world, boxestodelete)
+				boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world, boxestodelete)
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
@@ -124,7 +178,7 @@ while True:
 	# Step Physics Simulation
 	pybullet.stepSimulation()
 	
-	groundpoints = worldRender.groundVertices(8, -9, world)
+	groundpoints = worldRender.groundVertices(worldsize, -9, world)
 	
 	for vertex in groundpoints:
 		render_vertices.append(vertex)
@@ -145,12 +199,15 @@ while True:
 		for vertex in cubepoints:
 			render_vertices.append(vertex)
 			colors.append((0.5,0.5,0.5))
-		
-	render_loop(render_vertices, colors)
+	
+	numtriangles = update_vertex_arrays(render_vertices, colors, program)
+	render_loop(program, numtriangles)
 	
 	# Empty Vertex List
 	render_vertices = []
 	colors = []
+	vertex_array = numpy.array([], numpy.float32)
+	color_array = numpy.array([], numpy.float32)
 	
 	pygame.display.flip()
 	pygame.time.wait(10)
