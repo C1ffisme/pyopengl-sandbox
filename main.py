@@ -24,6 +24,7 @@ vertex_array = numpy.array([], numpy.float32)
 color_array = numpy.array([], numpy.float32)
 
 worldsize = 13
+basez = -9
 world = worldGen.worldGen(worldsize)
 
 # Temporary line to test world rendering.
@@ -166,7 +167,7 @@ while True:
 			if pressed_keys[pygame.K_SPACE]:
 				yaw, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
-				boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world, boxestodelete)
+				boxestodelete = worldGen.resetWorldBoxes(worldsize, basez, world, boxestodelete)
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
@@ -178,12 +179,14 @@ while True:
 	# Step Physics Simulation
 	pybullet.stepSimulation()
 	
-	groundpoints = worldRender.groundVertices(worldsize, -9, world)
+	groundpoints = worldRender.groundVertices(worldsize, basez, world)
 	
 	for vertex in groundpoints:
 		addVertex(vertex)
-		if vertex[2] > -5:
-			addColorVertex((0.7,0.5,0.2))
+		sand_value = (vertex[2]-basez)/10.0
+		
+		if sand_value > 0.0:
+			addColorVertex((sand_value+0.2,0.5,0.2))
 		else:
 			addColorVertex((0.2,0.5,0.2))
 	
