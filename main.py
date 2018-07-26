@@ -19,8 +19,6 @@ import render.worldRender as worldRender
 import world.worldGen as worldGen
 
 cubes = []
-render_vertices = []
-colors = []
 
 vertex_array = numpy.array([], numpy.float32)
 color_array = numpy.array([], numpy.float32)
@@ -109,15 +107,17 @@ def create_program():
 	
 	return program
 
-def update_vertex_arrays(vertex_data, color_data, program):
+def addVertex(vertex):
+	global vertex_array
+	vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
+
+def addColorVertex(color):
+	global color_array
+	color_array = numpy.append(color_array, [color[0],color[1],color[2]])
+
+def update_vertex_arrays(program):
 	global vertex_array
 	global color_array
-	
-	i = 0
-	for vertex in vertex_data:
-		color_array = numpy.append(color_array, [colors[i][0],colors[i][1],colors[i][2]])
-		vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
-		i+=1
 	
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_array)
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, color_array)
@@ -181,11 +181,11 @@ while True:
 	groundpoints = worldRender.groundVertices(worldsize, -9, world)
 	
 	for vertex in groundpoints:
-		render_vertices.append(vertex)
+		addVertex(vertex)
 		if vertex[2] > -5:
-			colors.append((0.7,0.5,0.2))
+			addColorVertex((0.7,0.5,0.2))
 		else:
-			colors.append((0.2,0.5,0.2))
+			addColorVertex((0.2,0.5,0.2))
 	
 	# Calculate Vertices to render
 	for cube in cubes:
@@ -197,15 +197,12 @@ while True:
 		cubepoints = cubeRender.cubeVertices(cubePos, size, cubeOrn)
 		
 		for vertex in cubepoints:
-			render_vertices.append(vertex)
-			colors.append((0.5,0.5,0.5))
+			addVertex(vertex)
+			addColorVertex((0.5,0.5,0.5))
 	
-	numtriangles = update_vertex_arrays(render_vertices, colors, program)
-	render_loop(program, numtriangles)
+	render_loop(program, update_vertex_arrays(program))
 	
 	# Empty Vertex List
-	render_vertices = []
-	colors = []
 	vertex_array = numpy.array([], numpy.float32)
 	color_array = numpy.array([], numpy.float32)
 	
