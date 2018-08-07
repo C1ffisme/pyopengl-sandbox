@@ -12,20 +12,28 @@ import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+import ctypes
 from OpenGL.GL import shaders
 
 import render.cubeRender as cubeRender
 import render.worldRender as worldRender
 import world.worldGen as worldGen
 
+# TERRAIN VBO ARRAYS
+
+worldsize = 30
+basez = -9
+world = worldGen.worldGen(worldsize)
+
+terrain_vbo = numpy.array([], numpy.float32)
+color_vbo = numpy.array([], numpy.float32)
+
+# Cubes, non-terrain object arrays. Using VBOs for moving objects is laggy.
+
 cubes = []
 
 vertex_array = numpy.array([], numpy.float32)
 color_array = numpy.array([], numpy.float32)
-
-worldsize = 13
-basez = -9
-world = worldGen.worldGen(worldsize)
 
 # Temporary line to test world rendering.
 world[1][1] = 5
@@ -37,11 +45,12 @@ def init_libs():
 	pybullet.setGravity(0,0,-40)
 	
 	pygame.init()
-	pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+	pygame.display.set_mode(display, HWSURFACE|OPENGL|DOUBLEBUF)
 	pygame.key.set_repeat(1, 2)
 	
 	glEnable(GL_DEPTH_TEST)
 	glClearColor(0.5, 0.6, 1.0, 0.0);
+	glViewport(0, 0, display[0], display[1])
 	
 def setup_world():
 	"""Sets up the basic debug world."""
@@ -116,32 +125,80 @@ def addColorVertex(color):
 	global color_array
 	color_array = numpy.append(color_array, [color[0],color[1],color[2]])
 
-def update_vertex_arrays(program):
+def addVBOVertex(vertex, color):
+	global terrain_vbo
+	global color_vbo
+	
+	terrain_vbo = numpy.append(terrain_vbo, [vertex[0],vertex[1],vertex[2]])
+	color_vbo = numpy.append(color_vbo, [color[0],color[1],color[2]])
+
+def render_loop(program):
 	global vertex_array
 	global color_array
 	
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_array)
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, color_array)
-
+	
 	glEnableVertexAttribArray(0)
 	glEnableVertexAttribArray(1)
 
 	glBindAttribLocation(program, 0, "a_Position")
 	glBindAttribLocation(program, 1, "a_Color")
 	
-	return len(vertex_array)/3
+	glUseProgram(program)
+	glDrawArrays(GL_TRIANGLES, 0, len(vertex_array)/3)
+	
+	glDisableVertexAttribArray(0)
+	glDisableVertexAttribArray(1)
+	glUseProgram(0)
 
-def render_loop(program, numtriangles):
-	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+def recalculate_vbos(buffers):
+	groundpoints = worldRender.groundVertices(worldsize, basez, world)
+	for vertex in groundpoints:
+		sand_value = (vertex[2]-basez)/10.0
+		
+		if sand_value > 0.0:
+			addVBOVertex(vertex,(sand_value+0.2,0.5,0.2))
+		else:
+			addVBOVertex(vertex,(0.2,0.5,0.2))
+	
+	glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
+	glBufferData(GL_ARRAY_BUFFER, len(terrain_vbo)*4, (ctypes.c_float*len(terrain_vbo))(*terrain_vbo), GL_STATIC_DRAW)
+
+	glBindBuffer(GL_ARRAY_BUFFER, buffers[1])
+	glBufferData(GL_ARRAY_BUFFER, len(color_vbo)*4, (ctypes.c_float*len(color_vbo))(*color_vbo), GL_STATIC_DRAW)
+	glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+def vbo_render(program):
+	glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
+	
+	glBindBuffer(GL_ARRAY_BUFFER, buffers[1])
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
+	glBindBuffer(GL_ARRAY_BUFFER, 0)
+	
+	glEnableVertexAttribArray(0)
+	glEnableVertexAttribArray(1)
+	
+	glBindAttribLocation(program, 0, "a_Position")
+	glBindAttribLocation(program, 1, "a_Color")
 	
 	glUseProgram(program)
-	glDrawArrays(GL_TRIANGLES, 0, numtriangles)
 	
+	glDrawArrays(GL_TRIANGLES, 0, len(terrain_vbo)/3)
+	
+	glDisableVertexAttribArray(1)
+	glDisableVertexAttribArray(0)
+	
+	glUseProgram(0)
 
 init_libs()
 setup_world()
 yaw, camerax, cameray, cameraz = reset_camera()
 program = create_program()
+
+buffers = glGenBuffers(2)
+recalculate_vbos(buffers)
 
 walkspeed = 0.5
 turnspeed = 0.03
@@ -172,23 +229,9 @@ while True:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
 	
-	glLoadIdentity()
-	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
-	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),cameraz, 0,0,1)
-	
 	# Step Physics Simulation
 	pybullet.stepSimulation()
 	
-	groundpoints = worldRender.groundVertices(worldsize, basez, world)
-	
-	for vertex in groundpoints:
-		addVertex(vertex)
-		sand_value = (vertex[2]-basez)/10.0
-		
-		if sand_value > 0.0:
-			addColorVertex((sand_value+0.2,0.5,0.2))
-		else:
-			addColorVertex((0.2,0.5,0.2))
 	
 	# Calculate Vertices to render
 	for cube in cubes:
@@ -203,7 +246,14 @@ while True:
 			addVertex(vertex)
 			addColorVertex((0.5,0.5,0.5))
 	
-	render_loop(program, update_vertex_arrays(program))
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+	
+	glLoadIdentity()
+	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
+	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),cameraz, 0,0,1)
+	
+	vbo_render(program)
+	render_loop(program)
 	
 	# Empty Vertex List
 	vertex_array = numpy.array([], numpy.float32)
