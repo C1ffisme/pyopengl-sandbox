@@ -17,6 +17,7 @@ from OpenGL.GL import shaders
 
 import render.cubeRender as cubeRender
 import render.worldRender as worldRender
+import render.renderLoop as renderLoop
 import world.worldGen as worldGen
 
 # TERRAIN VBO ARRAYS
@@ -117,6 +118,41 @@ def create_program():
 	
 	return program
 
+def create_gui_program():
+	VERTEX_SHADER = """ 
+		attribute vec3 a_Position;
+		attribute vec3 a_Color;
+
+		varying vec4 v_Color;
+
+		void main()
+		{
+			v_Color = vec4(a_Color, 1.0);
+			gl_Position = vec4(a_Position, 1.0);
+		}
+		"""
+
+	FRAGMENT_SHADER = """
+		varying vec4 v_Color;
+
+		void main()
+		{
+			gl_FragColor = v_Color;
+		}
+		"""
+	
+	vertshader = shaders.compileShader(VERTEX_SHADER, GL_VERTEX_SHADER)
+	fragshader = shaders.compileShader(FRAGMENT_SHADER, GL_FRAGMENT_SHADER)
+
+	program = glCreateProgram()
+	glAttachShader(program, vertshader)
+	glAttachShader(program, fragshader)
+	
+	glLinkProgram(program)
+	
+	return program
+
+
 def addVertex(vertex):
 	global vertex_array
 	vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
@@ -131,26 +167,6 @@ def addVBOVertex(vertex, color):
 	
 	terrain_vbo = numpy.append(terrain_vbo, [vertex[0],vertex[1],vertex[2]])
 	color_vbo = numpy.append(color_vbo, [color[0],color[1],color[2]])
-
-def render_loop(program):
-	global vertex_array
-	global color_array
-	
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_array)
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, color_array)
-	
-	glEnableVertexAttribArray(0)
-	glEnableVertexAttribArray(1)
-
-	glBindAttribLocation(program, 0, "a_Position")
-	glBindAttribLocation(program, 1, "a_Color")
-	
-	glUseProgram(program)
-	glDrawArrays(GL_TRIANGLES, 0, len(vertex_array)/3)
-	
-	glDisableVertexAttribArray(0)
-	glDisableVertexAttribArray(1)
-	glUseProgram(0)
 
 def recalculate_vbos(buffers):
 	groundpoints = worldRender.groundVertices(worldsize, basez, world)
@@ -168,29 +184,6 @@ def recalculate_vbos(buffers):
 	glBindBuffer(GL_ARRAY_BUFFER, buffers[1])
 	glBufferData(GL_ARRAY_BUFFER, len(color_vbo)*4, (ctypes.c_float*len(color_vbo))(*color_vbo), GL_STATIC_DRAW)
 	glBindBuffer(GL_ARRAY_BUFFER, 0)
-
-def vbo_render(program):
-	glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
-	
-	glBindBuffer(GL_ARRAY_BUFFER, buffers[1])
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
-	glBindBuffer(GL_ARRAY_BUFFER, 0)
-	
-	glEnableVertexAttribArray(0)
-	glEnableVertexAttribArray(1)
-	
-	glBindAttribLocation(program, 0, "a_Position")
-	glBindAttribLocation(program, 1, "a_Color")
-	
-	glUseProgram(program)
-	
-	glDrawArrays(GL_TRIANGLES, 0, len(terrain_vbo)/3)
-	
-	glDisableVertexAttribArray(1)
-	glDisableVertexAttribArray(0)
-	
-	glUseProgram(0)
 
 init_libs()
 setup_world()
@@ -252,8 +245,8 @@ while True:
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
 	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),cameraz, 0,0,1)
 	
-	vbo_render(program)
-	render_loop(program)
+	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
+	renderLoop.render_loop(program, vertex_array, color_array)
 	
 	# Empty Vertex List
 	vertex_array = numpy.array([], numpy.float32)
