@@ -19,6 +19,7 @@ import render.cubeRender as cubeRender
 import render.worldRender as worldRender
 import render.renderLoop as renderLoop
 import world.worldGen as worldGen
+import gui.textRender as textRender
 
 # TERRAIN VBO ARRAYS
 
@@ -196,6 +197,10 @@ recalculate_vbos(buffers)
 walkspeed = 0.5
 turnspeed = 0.03
 
+text_collection = textRender.TextCollection(display, "gui/textures/")
+
+text_collection.add_text("PyOpenGL Sandbox", 30.0, 0.0, 0.8, True)
+
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -247,6 +252,7 @@ while True:
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
 	renderLoop.render_loop(program, vertex_array, color_array)
+	text_collection.render()
 	
 	# Empty Vertex List
 	vertex_array = numpy.array([], numpy.float32)
