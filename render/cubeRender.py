@@ -1,5 +1,6 @@
 import pybullet
 import math
+import objImport
 
 def createCube(pos, size=1, orn=[0,0,0]):
 	"""This function creates a cube using the size of the cube, 
@@ -56,6 +57,8 @@ basic_cube = [
 	(-1,-1,-1)
 ]
 
+basic_round = objImport.importObj("Round.obj")
+
 def cubeVertices(pos, size, orn):
 	"""This function gives the triangles for OpenGL to render a cube given
 	the position, size of the cube and euler rotation."""
@@ -65,7 +68,7 @@ def cubeVertices(pos, size, orn):
 	cubey = pos[1]
 	cubez = pos[2]
 	
-	for vertex in basic_cube:
+	for vertex in basic_round:
 		v_x = (vertex[0] * size) + cubex
 		v_y = (vertex[1] * size) + cubey
 		v_z = (vertex[2] * size) + cubez

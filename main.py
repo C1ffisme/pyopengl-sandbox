@@ -38,7 +38,6 @@ vertex_array = numpy.array([], numpy.float32)
 color_array = numpy.array([], numpy.float32)
 
 # Temporary line to test world rendering.
-world[1][1] = 5
 display = (1200, 720)
 
 def init_libs():
