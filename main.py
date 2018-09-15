@@ -59,9 +59,9 @@ def setup_world():
 	pybullet.createMultiBody(0,plane,-1,[0,0,-9])
 
 	# Later on my plan is to just generate a world. For now, we need some debug cubes.
-	cubes.append(cubeRender.createCube([0,12,0], 1, [0,0,45]))
-	cubes.append(cubeRender.createCube([4,4,6], 1, [0,0,0]))
-	cubes.append(cubeRender.createCube([4,5.9,9], 2, [0,0,0]))
+	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
+	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
+	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
 	
 	boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world) # We run this once to initiate the first collision boxes.
 
@@ -70,6 +70,7 @@ def reset_camera():
 	
 	# These numbers have no significance other than just being near where the cubes and terrain are rendered. (At the Origin)
 	yaw = 0.0
+	pitch = 0.0
 	camerax = -3
 	cameray = 1
 	cameraz = -2
@@ -81,8 +82,8 @@ def reset_camera():
 	
 	glLoadIdentity()
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
-	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),-4, 0,0,1)
-	return yaw, camerax, cameray, cameraz
+	gluLookAt(camerax,cameray,cameraz, camerax+(math.cos(yaw)*math.cos(pitch)),cameray+(math.sin(yaw)*math.cos(pitch)),(-4)+math.cos(pitch), 0,0,1)
+	return yaw, pitch, camerax, cameray, cameraz
 
 def create_program():
 	VERTEX_SHADER = """ 
@@ -152,15 +153,6 @@ def create_gui_program():
 	
 	return program
 
-
-def addVertex(vertex):
-	global vertex_array
-	vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
-
-def addColorVertex(color):
-	global color_array
-	color_array = numpy.append(color_array, [color[0],color[1],color[2]])
-
 def addVBOVertex(vertex, color):
 	global terrain_vbo
 	global color_vbo
@@ -187,7 +179,7 @@ def recalculate_vbos(buffers):
 
 init_libs()
 setup_world()
-yaw, camerax, cameray, cameraz = reset_camera()
+yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
 
 buffers = glGenBuffers(2)
@@ -212,6 +204,10 @@ while True:
 				yaw += turnspeed
 			elif pressed_keys[pygame.K_RIGHT]:
 				yaw -= turnspeed
+			elif pressed_keys[pygame.K_o]:
+				pitch -= turnspeed
+			elif pressed_keys[pygame.K_l]:
+				pitch += turnspeed
 			if pressed_keys[pygame.K_UP]:
 				camerax += math.cos(yaw) * walkspeed 
 				cameray += math.sin(yaw) * walkspeed
@@ -219,7 +215,7 @@ while True:
 				camerax -= math.cos(yaw) * walkspeed
 				cameray -= math.sin(yaw) * walkspeed
 			if pressed_keys[pygame.K_SPACE]:
-				yaw, camerax, cameray, cameraz = reset_camera()
+				yaw, pitch, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
 				boxestodelete = worldGen.resetWorldBoxes(worldsize, basez, world, boxestodelete)
 			if pressed_keys[pygame.K_f]:
@@ -230,32 +226,15 @@ while True:
 	pybullet.stepSimulation()
 	
 	
-	# Calculate Vertices to render
-	for cube in cubes:
-		cubeId = cube[0]
-		size = cube[1]
-		
-		cubePos, cubeOrn = pybullet.getBasePositionAndOrientation(cubeId)
-		
-		cubepoints = cubeRender.cubeVertices(cubePos, size, cubeOrn)
-		
-		for vertex in cubepoints:
-			addVertex(vertex)
-			addColorVertex((0.5,0.5,0.5))
-	
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 	
 	glLoadIdentity()
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
-	gluLookAt(camerax,cameray,cameraz, camerax+math.cos(yaw),cameray+math.sin(yaw),cameraz, 0,0,1)
+	gluLookAt(camerax,cameray,cameraz, camerax+(math.cos(yaw)*math.cos(pitch)),cameray+(math.sin(yaw)*math.cos(pitch)),cameraz+math.sin(pitch), 0,0,1)
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
-	renderLoop.render_loop(program, vertex_array, color_array)
+	renderLoop.render_loop(program, cubes)
 	text_collection.render()
-	
-	# Empty Vertex List
-	vertex_array = numpy.array([], numpy.float32)
-	color_array = numpy.array([], numpy.float32)
 	
 	pygame.display.flip()
 	pygame.time.wait(10)

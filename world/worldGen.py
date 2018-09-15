@@ -19,7 +19,6 @@ def worldGen(size, amplitude=3):
 		for x in range(0, size):
 			worldb.append([])
 			for y in range(0,size):
-				print(x,y, size/2, math.floor(y/2.0))
 				worldb[x].append(worlda[int(math.floor(x/2.0))][int(math.floor(y/2.0))] + random.randint(-amplitude/3,amplitude/3))
 		
 		for x in range(0, size):

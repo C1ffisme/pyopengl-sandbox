@@ -5,7 +5,11 @@ import objImport
 def createCube(pos, size=1, orn=[0,0,0]):
 	"""This function creates a cube using the size of the cube, 
 	the position and the orientation in euler rotation."""
-	cubeStartOrientation = pybullet.getQuaternionFromEuler(orn)
+	for axes in orn:
+		radorn = (math.radians(orn[0]), math.radians(orn[1]), math.radians(orn[2]))
+		
+	
+	cubeStartOrientation = pybullet.getQuaternionFromEuler(radorn)
 
 	shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[size,size,size])
 	boxId = pybullet.createMultiBody(1,shape,-1,pos,cubeStartOrientation)
@@ -59,51 +63,15 @@ basic_cube = [
 
 basic_round = objImport.importObj("Round.obj")
 
-def cubeVertices(pos, size, orn):
-	"""This function gives the triangles for OpenGL to render a cube given
-	the position, size of the cube and euler rotation."""
+def cubeVertices(size):
+	"""Legacy function, soon to be removed."""
 	vertices = []
 	
-	cubex = pos[0]
-	cubey = pos[1]
-	cubez = pos[2]
-	
 	for vertex in basic_round:
-		v_x = (vertex[0] * size) + cubex
-		v_y = (vertex[1] * size) + cubey
-		v_z = (vertex[2] * size) + cubez
+		v_x = (vertex[0] * size)
+		v_y = (vertex[1] * size)
+		v_z = (vertex[2] * size)
 		
 		vertices.append((v_x, v_y, v_z))
-	
-	euler = pybullet.getEulerFromQuaternion(orn)
-	
-	if euler[2] != 0:
-		xrot = euler[0]
-		yrot = euler[1]
-		zrot = euler[2]
-		
-		i = 0
-		for vertex in vertices:
-			x = vertex[0] - cubex
-			y = vertex[1] - cubey
-			z = vertex[2] - cubez
-			
-			# Z Rotation
-			levelonex = ((math.cos(zrot)*x) - (math.sin(zrot)*y))
-			leveloney = ((math.sin(zrot)*x) + (math.cos(zrot)*y))
-			levelonez = z # Consistency
-			
-			# Y Rotation
-			leveltwox = ((math.cos(yrot)*levelonex) - (math.sin(yrot)*levelonez))
-			leveltwoy = leveloney
-			leveltwoz = ((math.sin(yrot)*levelonex) + (math.cos(yrot)*levelonez))
-			
-			# X Rotation
-			levelthreex = leveltwox + cubex
-			levelthreey = ((math.cos(xrot)*leveltwoy) - (math.sin(xrot)*leveltwoz)) + cubey
-			levelthreez = ((math.sin(xrot)*leveltwoy) + (math.cos(xrot)*leveltwoz)) + cubez
-			
-			vertices[i] = (levelthreex, levelthreey, levelthreez)
-			i += 1
 	
 	return vertices
