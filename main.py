@@ -195,6 +195,9 @@ text_collection = textRender.TextCollection(display, "gui/textures/")
 
 text_collection.add_text("PyOpenGL Sandbox", 30.0, 0.0, 0.8, True)
 
+prev_pressed = pygame.key.get_pressed()
+no_key_timer = 0
+
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -203,8 +206,8 @@ while True:
 		elif event.type == pygame.KEYDOWN:
 			pressed_keys = pygame.key.get_pressed()
 			
-			if event.key == pygame.K_m:
-				print(event.mod)
+			print(no_key_timer)
+			if pressed_keys[pygame.K_m] and (no_key_timer > 5 or not prev_pressed[pygame.K_m]):
 				if grab_mouse:
 					grab_mouse = False
 					pygame.mouse.set_visible(True)
@@ -217,6 +220,12 @@ while True:
 			elif pressed_keys[pygame.K_s]:
 				camerax -= math.cos(yaw) * walkspeed
 				cameray -= math.sin(yaw) * walkspeed
+			if pressed_keys[pygame.K_a]:
+				camerax += math.cos(yaw+(math.pi/2.0)) * walkspeed 
+				cameray += math.sin(yaw+(math.pi/2.0)) * walkspeed
+			if pressed_keys[pygame.K_d]:
+				camerax += math.cos(yaw-(math.pi/2.0)) * walkspeed 
+				cameray += math.sin(yaw-(math.pi/2.0)) * walkspeed
 			if pressed_keys[pygame.K_SPACE]:
 				yaw, pitch, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
@@ -224,6 +233,10 @@ while True:
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
+			
+			no_key_timer = 0
+			prev_pressed = pressed_keys
+			
 		elif event.type == pygame.MOUSEMOTION and grab_mouse:
 			mousemove = pygame.mouse.get_pos()
 			dyaw = mousemove[0] - (display[0]/2)
@@ -250,3 +263,5 @@ while True:
 	
 	pygame.display.flip()
 	pygame.time.wait(10)
+	
+	no_key_timer += 1
