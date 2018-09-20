@@ -182,11 +182,14 @@ setup_world()
 yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
 
+grab_mouse = False
+
 buffers = glGenBuffers(2)
 recalculate_vbos(buffers)
 
 walkspeed = 0.5
-turnspeed = 0.03
+
+sensitivity = 300.0
 
 text_collection = textRender.TextCollection(display, "gui/textures/")
 
@@ -200,18 +203,18 @@ while True:
 		elif event.type == pygame.KEYDOWN:
 			pressed_keys = pygame.key.get_pressed()
 			
-			if pressed_keys[pygame.K_LEFT]:
-				yaw += turnspeed
-			elif pressed_keys[pygame.K_RIGHT]:
-				yaw -= turnspeed
-			elif pressed_keys[pygame.K_o]:
-				pitch -= turnspeed
-			elif pressed_keys[pygame.K_l]:
-				pitch += turnspeed
-			if pressed_keys[pygame.K_UP]:
+			if event.key == pygame.K_m:
+				print(event.mod)
+				if grab_mouse:
+					grab_mouse = False
+					pygame.mouse.set_visible(True)
+				else:
+					grab_mouse = True
+					pygame.mouse.set_visible(False)
+			if pressed_keys[pygame.K_w]:
 				camerax += math.cos(yaw) * walkspeed 
 				cameray += math.sin(yaw) * walkspeed
-			elif pressed_keys[pygame.K_DOWN]:
+			elif pressed_keys[pygame.K_s]:
 				camerax -= math.cos(yaw) * walkspeed
 				cameray -= math.sin(yaw) * walkspeed
 			if pressed_keys[pygame.K_SPACE]:
@@ -221,6 +224,15 @@ while True:
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
+		elif event.type == pygame.MOUSEMOTION and grab_mouse:
+			mousemove = pygame.mouse.get_pos()
+			dyaw = mousemove[0] - (display[0]/2)
+			dpitch = mousemove[1] - (display[1]/2)
+			
+			yaw -= dyaw/float(sensitivity)
+			pitch -= dpitch/float(sensitivity)
+			pygame.mouse.set_pos((display[0]/2),(display[1]/2))
+				
 	
 	# Step Physics Simulation
 	pybullet.stepSimulation()
