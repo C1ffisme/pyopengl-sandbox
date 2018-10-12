@@ -4,6 +4,8 @@ from OpenGL import *
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
 
+texid = glGenTextures(1)
+
 class TextCollection():
 	"""A Text Collection is a collection of all the text items to be rendered on
 	the window. You could easily just use a list, but this is a matter of convenience and
@@ -143,7 +145,6 @@ def set_texture(char, font_location):
 	imgdata = pygame.image.tostring(img, "RGBA", 1)
 	imgwidth, imgheight = img.get_size()
 
-	texid = glGenTextures(1)
 	glBindTexture(GL_TEXTURE_2D, texid)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgwidth, imgheight, 0,
 			GL_RGBA, GL_UNSIGNED_BYTE, imgdata)
