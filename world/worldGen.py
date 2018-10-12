@@ -43,6 +43,8 @@ def resetWorldBoxes(size, basez, world, deleteids=[]):
 		for box in deleteids:
 			pybullet.removeBody(box)
 	
+	pybullet.resetSimulation()
+	
 	for x in range(0, size):
 		for y in range(0, size):
 			shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
