@@ -23,7 +23,7 @@ import gui.textRender as textRender
 
 # TERRAIN VBO ARRAYS
 
-worldsize = 30
+worldsize = 16
 basez = -9
 world = worldGen.worldGen(worldsize)
 
@@ -62,8 +62,10 @@ def setup_world():
 	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
 	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
 	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
-	
+
 	boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world) # We run this once to initiate the first collision boxes.
+	
+	return boxestodelete
 
 def reset_camera():
 	"""Resets the camera to the start position. Returns Yaw and Camera Position."""
@@ -161,6 +163,12 @@ def addVBOVertex(vertex, color):
 	color_vbo = numpy.append(color_vbo, [color[0],color[1],color[2]])
 
 def recalculate_vbos(buffers):
+	global terrain_vbo
+	global color_vbo
+	
+	terrain_vbo = numpy.array([], numpy.float32)
+	color_vbo = numpy.array([], numpy.float32)
+	
 	groundpoints = worldRender.groundVertices(worldsize, basez, world)
 	for vertex in groundpoints:
 		sand_value = (vertex[2]-basez)/10.0
@@ -170,15 +178,17 @@ def recalculate_vbos(buffers):
 		else:
 			addVBOVertex(vertex,(0.2,0.5,0.2))
 	
+	
 	glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
 	glBufferData(GL_ARRAY_BUFFER, len(terrain_vbo)*4, (ctypes.c_float*len(terrain_vbo))(*terrain_vbo), GL_STATIC_DRAW)
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffers[1])
 	glBufferData(GL_ARRAY_BUFFER, len(color_vbo)*4, (ctypes.c_float*len(color_vbo))(*color_vbo), GL_STATIC_DRAW)
 	glBindBuffer(GL_ARRAY_BUFFER, 0)
+	
 
 init_libs()
-setup_world()
+boxestodelete = setup_world()
 yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
 
@@ -189,7 +199,7 @@ recalculate_vbos(buffers)
 
 walkspeed = 0.5
 
-sensitivity = 300.0
+sensitivity = 400.0
 
 text_collection = textRender.TextCollection(display, "gui/textures/")
 
@@ -206,7 +216,6 @@ while True:
 		elif event.type == pygame.KEYDOWN:
 			pressed_keys = pygame.key.get_pressed()
 			
-			print(no_key_timer)
 			if pressed_keys[pygame.K_m] and (no_key_timer > 5 or not prev_pressed[pygame.K_m]):
 				if grab_mouse:
 					grab_mouse = False
@@ -229,7 +238,14 @@ while True:
 			if pressed_keys[pygame.K_SPACE]:
 				yaw, pitch, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
+				digx = int(float(camerax)/4.0)
+				digy = int(float(cameray)/4.0)
+				if digx < len(world):
+					if digy < len(world[digx]):
+						world[digx][digy] = world[digx][digy] - 1
+				
 				boxestodelete = worldGen.resetWorldBoxes(worldsize, basez, world, boxestodelete)
+				recalculate_vbos(buffers)
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
@@ -242,8 +258,12 @@ while True:
 			dyaw = mousemove[0] - (display[0]/2)
 			dpitch = mousemove[1] - (display[1]/2)
 			
+			newpitch = pitch - dpitch/float(sensitivity)
+			
 			yaw -= dyaw/float(sensitivity)
-			pitch -= dpitch/float(sensitivity)
+			if newpitch > -1.45 and newpitch < 1.45:
+				pitch = newpitch
+			
 			pygame.mouse.set_pos((display[0]/2),(display[1]/2))
 				
 	

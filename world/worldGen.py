@@ -43,12 +43,12 @@ def resetWorldBoxes(size, basez, world, deleteids=[]):
 		for box in deleteids:
 			pybullet.removeBody(box)
 	
-	halfsize = int(math.floor(size/2.0))
-	
-	for x in range(-halfsize, halfsize):
-		for y in range(-halfsize, halfsize):
+	for x in range(0, size):
+		for y in range(0, size):
 			shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
 			boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[x][y]+basez],[0,0,0])
 			boxes.append(boxId)
+	
+	print(pybullet.getNumBodies())
 	
 	return boxes
