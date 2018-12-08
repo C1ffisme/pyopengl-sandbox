@@ -23,9 +23,18 @@ import gui.textRender as textRender
 
 # TERRAIN VBO ARRAYS
 
-worldsize = 16
+chunksize = 16
 basez = -9
-world = worldGen.worldGen(worldsize)
+world = {}
+view_range = 1
+chunk_view_adjustment = 4 # This is a slight multiplier to the size of the world so that it doesn't look small when the player walks on it.
+
+for x in range(-5, 5):
+	for y in range(-5, 5):
+		chunk = worldGen.worldGen(chunksize)
+		world[(x,y)] = chunk
+
+print(world.keys())
 
 terrain_vbo = numpy.array([], numpy.float32)
 color_vbo = numpy.array([], numpy.float32)
@@ -53,7 +62,7 @@ def init_libs():
 	glClearColor(0.5, 0.6, 1.0, 0.0);
 	glViewport(0, 0, display[0], display[1])
 	
-def setup_world():
+def setup_world(chunk):
 	"""Sets up the basic debug world."""
 	plane = pybullet.createCollisionShape(pybullet.GEOM_PLANE)
 	pybullet.createMultiBody(0,plane,-1,[0,0,-9])
@@ -63,7 +72,7 @@ def setup_world():
 	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
 	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
 
-	boxestodelete = worldGen.resetWorldBoxes(worldsize, -9, world) # We run this once to initiate the first collision boxes.
+	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, chunk) # We run this once to initiate the first collision boxes.
 	
 	return boxestodelete
 
@@ -162,14 +171,14 @@ def addVBOVertex(vertex, color):
 	terrain_vbo = numpy.append(terrain_vbo, [vertex[0],vertex[1],vertex[2]])
 	color_vbo = numpy.append(color_vbo, [color[0],color[1],color[2]])
 
-def recalculate_vbos(buffers):
+def recalculate_vbos(buffers, player_chunk_position, view_range):
 	global terrain_vbo
 	global color_vbo
 	
 	terrain_vbo = numpy.array([], numpy.float32)
 	color_vbo = numpy.array([], numpy.float32)
 	
-	groundpoints = worldRender.groundVertices(worldsize, basez, world)
+	groundpoints = worldRender.groundVertices(chunksize, basez, world, player_chunk_position, view_range, chunk_view_adjustment)
 	for vertex in groundpoints:
 		sand_value = (vertex[2]-basez)/10.0
 		
@@ -188,14 +197,16 @@ def recalculate_vbos(buffers):
 	
 
 init_libs()
-boxestodelete = setup_world()
+player_chunk_position = (round(-3/chunksize), round(1/chunksize)) # -3 and 1 are the default position of the camera but I need reset camera to come after the world is setup.
+last_player_chunk_position = player_chunk_position
+boxestodelete = setup_world(world[player_chunk_position])
 yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
 
 grab_mouse = False
 
 buffers = glGenBuffers(2)
-recalculate_vbos(buffers)
+recalculate_vbos(buffers, player_chunk_position, view_range)
 
 walkspeed = 0.5
 
@@ -240,12 +251,13 @@ while True:
 			if pressed_keys[pygame.K_q]:
 				digx = int(float(camerax)/4.0)
 				digy = int(float(cameray)/4.0)
-				if digx < len(world):
-					if digy < len(world[digx]):
-						world[digx][digy] = world[digx][digy] - 1
+				chunk = world[player_chunk_position]
+				if digx < len(chunk):
+					if digy < len(chunk[digx]):
+						world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] - 1
 				
-				boxestodelete = worldGen.resetWorldBoxes(worldsize, basez, world, boxestodelete)
-				recalculate_vbos(buffers)
+				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, world[player_chunk_position], boxestodelete)
+				recalculate_vbos(buffers, player_chunk_position, view_range)
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
@@ -273,13 +285,21 @@ while True:
 	
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 	
+	player_chunk_position = (round(camerax/(chunksize*4)), round(cameray/(chunksize*4)))
+	print(player_chunk_position)
+	if player_chunk_position != last_player_chunk_position:
+		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, world[player_chunk_position], boxestodelete)
+		recalculate_vbos(buffers, player_chunk_position, view_range)
+	
+	last_player_chunk_position = player_chunk_position
+	
 	glLoadIdentity()
 	gluPerspective(45, (float(display[0])/float(display[1])), 0.1, 100.0)
 	gluLookAt(camerax,cameray,cameraz, camerax+(math.cos(yaw)*math.cos(pitch)),cameray+(math.sin(yaw)*math.cos(pitch)),cameraz+math.sin(pitch), 0,0,1)
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
 	renderLoop.render_loop(program, cubes)
-	text_collection.render()
+	# text_collection.render() Laggy and problematic
 	
 	pygame.display.flip()
 	pygame.time.wait(10)

@@ -4,8 +4,8 @@ import math
 
 def worldGen(size, amplitude=3):
 	"""Temporary worldgen function. Will be replaced later with something
-	that actually looks nice. Takes size and noise amplitude and returns
-	world vertices for use in other functions."""
+	that actually looks nice. Takes size and noise amplitude
+	and returns chunk vertices for use in other functions."""
 	worlda = []
 	worldb = []
 	world = []
@@ -50,7 +50,5 @@ def resetWorldBoxes(size, basez, world, deleteids=[]):
 			shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
 			boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[x][y]+basez],[0,0,0])
 			boxes.append(boxId)
-	
-	print(pybullet.getNumBodies())
 	
 	return boxes
