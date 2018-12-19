@@ -68,11 +68,11 @@ def setup_world(world, player_chunk_position):
 	pybullet.createMultiBody(0,plane,-1,[0,0,-9])
 
 	# Later on my plan is to just generate a world. For now, we need some debug cubes.
-	# cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
+	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
 	#cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
 	#cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
 
-	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, player_chunk_position, chunk) # We run this once to initiate the first collision boxes.
+	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, player_chunk_position, world) # We run this once to initiate the first collision boxes.
 	
 	return boxestodelete
 
@@ -288,7 +288,7 @@ while True:
 	player_chunk_position = (round(camerax/(chunksize*4)), round(cameray/(chunksize*4)))
 	print(player_chunk_position)
 	if player_chunk_position != last_player_chunk_position:
-		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, boxestodelete)
+		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 		recalculate_vbos(buffers, player_chunk_position, view_range)
 	
 	last_player_chunk_position = player_chunk_position
