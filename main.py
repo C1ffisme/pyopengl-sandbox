@@ -69,8 +69,8 @@ def setup_world(world, player_chunk_position):
 
 	# Later on my plan is to just generate a world. For now, we need some debug cubes.
 	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
-	#cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
-	#cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
+	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
+	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
 
 	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, player_chunk_position, world) # We run this once to initiate the first collision boxes.
 	
@@ -286,7 +286,6 @@ while True:
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 	
 	player_chunk_position = (round(camerax/(chunksize*4)), round(cameray/(chunksize*4)))
-	print(player_chunk_position)
 	if player_chunk_position != last_player_chunk_position:
 		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 		recalculate_vbos(buffers, player_chunk_position, view_range)
@@ -298,7 +297,6 @@ while True:
 	gluLookAt(camerax,cameray,cameraz, camerax+(math.cos(yaw)*math.cos(pitch)),cameray+(math.sin(yaw)*math.cos(pitch)),cameraz+math.sin(pitch), 0,0,1)
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
-	print(cubes)
 	renderLoop.render_loop(program, cubes)
 	# text_collection.render() Laggy and problematic
 	

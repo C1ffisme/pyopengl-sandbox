@@ -21,7 +21,6 @@ def render_loop(program, cubes):
 		cubeId = cube[0]
 		size = cube[1]
 		
-		print(cubeId)
 		cubePos, cubeOrn = pybullet.getBasePositionAndOrientation(cubeId)
 		
 		cubepoints = cubeRender.cubeVertices(size)
