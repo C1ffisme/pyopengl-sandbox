@@ -62,17 +62,17 @@ def init_libs():
 	glClearColor(0.5, 0.6, 1.0, 0.0);
 	glViewport(0, 0, display[0], display[1])
 	
-def setup_world(chunk):
+def setup_world(world, player_chunk_position):
 	"""Sets up the basic debug world."""
 	plane = pybullet.createCollisionShape(pybullet.GEOM_PLANE)
 	pybullet.createMultiBody(0,plane,-1,[0,0,-9])
 
 	# Later on my plan is to just generate a world. For now, we need some debug cubes.
-	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
-	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
-	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
+	# cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
+	#cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
+	#cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
 
-	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, chunk) # We run this once to initiate the first collision boxes.
+	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, player_chunk_position, chunk) # We run this once to initiate the first collision boxes.
 	
 	return boxestodelete
 
@@ -199,7 +199,7 @@ def recalculate_vbos(buffers, player_chunk_position, view_range):
 init_libs()
 player_chunk_position = (round(-3/chunksize), round(1/chunksize)) # -3 and 1 are the default position of the camera but I need reset camera to come after the world is setup.
 last_player_chunk_position = player_chunk_position
-boxestodelete = setup_world(world[player_chunk_position])
+boxestodelete = setup_world(world, player_chunk_position)
 yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
 
@@ -256,7 +256,7 @@ while True:
 					if digy < len(chunk[digx]):
 						world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] - 1
 				
-				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, world[player_chunk_position], boxestodelete)
+				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 				recalculate_vbos(buffers, player_chunk_position, view_range)
 			if pressed_keys[pygame.K_f]:
 				for cube in cubes:
@@ -288,7 +288,7 @@ while True:
 	player_chunk_position = (round(camerax/(chunksize*4)), round(cameray/(chunksize*4)))
 	print(player_chunk_position)
 	if player_chunk_position != last_player_chunk_position:
-		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, world[player_chunk_position], boxestodelete)
+		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, boxestodelete)
 		recalculate_vbos(buffers, player_chunk_position, view_range)
 	
 	last_player_chunk_position = player_chunk_position
@@ -298,6 +298,7 @@ while True:
 	gluLookAt(camerax,cameray,cameraz, camerax+(math.cos(yaw)*math.cos(pitch)),cameray+(math.sin(yaw)*math.cos(pitch)),cameraz+math.sin(pitch), 0,0,1)
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
+	print(cubes)
 	renderLoop.render_loop(program, cubes)
 	# text_collection.render() Laggy and problematic
 	

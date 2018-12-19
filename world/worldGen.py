@@ -34,7 +34,7 @@ def worldGen(size, amplitude=3):
 	
 	return world
 
-def resetWorldBoxes(size, basez, world, deleteids=[]):
+def resetWorldBoxes(size, basez, player_chunk_position, world, deleteids=[]):
 	"""This is a function which creates or replaces the collisionshape
 	of the world."""
 	boxes = []
@@ -44,11 +44,11 @@ def resetWorldBoxes(size, basez, world, deleteids=[]):
 			pybullet.removeBody(box)
 	
 	pybullet.resetSimulation()
-	
-	for x in range(0, size):
-		for y in range(0, size):
-			shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
-			boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[x][y]+basez],[0,0,0])
-			boxes.append(boxId)
+	if player_chunk_position in world:
+		for x in range(0, size):
+			for y in range(0, size):
+				shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
+				boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[player_chunk_position][x][y]+basez],[0,0,0])
+				boxes.append(boxId)
 	
 	return boxes
