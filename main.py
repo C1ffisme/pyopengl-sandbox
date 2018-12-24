@@ -20,6 +20,8 @@ import render.worldRender as worldRender
 import render.renderLoop as renderLoop
 import world.worldGen as worldGen
 import gui.textRender as textRender
+import gui.invRender as invRender
+import gui.inventory as inventory
 
 # TERRAIN VBO ARRAYS
 
@@ -202,8 +204,10 @@ last_player_chunk_position = player_chunk_position
 boxestodelete = setup_world(world, player_chunk_position)
 yaw, pitch, camerax, cameray, cameraz = reset_camera()
 program = create_program()
+gui_program = create_gui_program()
 
 grab_mouse = False
+gui_active = False
 
 buffers = glGenBuffers(2)
 recalculate_vbos(buffers, player_chunk_position, view_range)
@@ -213,11 +217,13 @@ walkspeed = 0.5
 sensitivity = 400.0
 
 text_collection = textRender.TextCollection(display, "gui/textures/")
-
 text_collection.add_text("PyOpenGL Sandbox", 30.0, 0.0, 0.8, True)
 
 prev_pressed = pygame.key.get_pressed()
 no_key_timer = 0
+
+gui_v, gui_c = invRender.create_inventory(2,4, display, [])
+player_inventory = inventory.create_inv(2,4)
 
 while True:
 	for event in pygame.event.get():
@@ -234,38 +240,57 @@ while True:
 				else:
 					grab_mouse = True
 					pygame.mouse.set_visible(False)
-			if pressed_keys[pygame.K_w]:
+			if pressed_keys[pygame.K_w] and not gui_active:
 				camerax += math.cos(yaw) * walkspeed 
 				cameray += math.sin(yaw) * walkspeed
-			elif pressed_keys[pygame.K_s]:
+			elif pressed_keys[pygame.K_s] and not gui_active:
 				camerax -= math.cos(yaw) * walkspeed
 				cameray -= math.sin(yaw) * walkspeed
-			if pressed_keys[pygame.K_a]:
+			if pressed_keys[pygame.K_a] and not gui_active:
 				camerax += math.cos(yaw+(math.pi/2.0)) * walkspeed 
 				cameray += math.sin(yaw+(math.pi/2.0)) * walkspeed
-			if pressed_keys[pygame.K_d]:
+			if pressed_keys[pygame.K_d] and not gui_active:
 				camerax += math.cos(yaw-(math.pi/2.0)) * walkspeed 
 				cameray += math.sin(yaw-(math.pi/2.0)) * walkspeed
-			if pressed_keys[pygame.K_SPACE]:
+			if pressed_keys[pygame.K_SPACE] and not gui_active:
 				yaw, pitch, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
 				digx = int(float(camerax)/4.0)
 				digy = int(float(cameray)/4.0)
 				chunk = world[player_chunk_position]
-				if digx < len(chunk):
-					if digy < len(chunk[digx]):
+				if digx < len(chunk) -1:
+					if digy < len(chunk[digx]) -1:
 						world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] - 1
+						inventory.add_to_inv(player_inventory, "dirt")
 				
 				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 				recalculate_vbos(buffers, player_chunk_position, view_range)
-			if pressed_keys[pygame.K_f]:
+			if pressed_keys[pygame.K_e]:
+				digx = int(float(camerax)/4.0)
+				digy = int(float(cameray)/4.0)
+				chunk = world[player_chunk_position]
+				if digx < len(chunk) -1:
+					if digy < len(chunk[digx]) -1:
+						if inventory.inv_contains(player_inventory, "dirt"):
+							world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] + 1
+							inventory.remove_from_inv(player_inventory, "dirt")
+				
+				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
+				recalculate_vbos(buffers, player_chunk_position, view_range)
+			if pressed_keys[pygame.K_f] and not gui_active:
 				for cube in cubes:
 					pybullet.applyExternalForce(cube[0], -1, [0,0,100],[0,0,0],pybullet.LINK_FRAME)
+			if pressed_keys[pygame.K_i] and (no_key_timer > 5 or not prev_pressed[pygame.K_i]):
+				gui_v, gui_c = invRender.create_inventory(2,4, display, player_inventory)
+				if gui_active:
+					gui_active = False
+				else:
+					gui_active = True
 			
 			no_key_timer = 0
 			prev_pressed = pressed_keys
 			
-		elif event.type == pygame.MOUSEMOTION and grab_mouse:
+		elif event.type == pygame.MOUSEMOTION and grab_mouse and not gui_active:
 			mousemove = pygame.mouse.get_pos()
 			dyaw = mousemove[0] - (display[0]/2)
 			dpitch = mousemove[1] - (display[1]/2)
@@ -299,6 +324,8 @@ while True:
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
 	renderLoop.render_loop(program, cubes)
 	# text_collection.render() Laggy and problematic
+	if gui_active:
+		renderLoop.gui_render(gui_program, gui_v, gui_c)
 	
 	pygame.display.flip()
 	pygame.time.wait(10)
