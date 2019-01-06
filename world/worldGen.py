@@ -2,7 +2,7 @@ import random
 import pybullet
 import math
 
-def worldGen(size, amplitude=3):
+def worldGen(size, amplitude=4):
 	"""Temporary worldgen function. Will be replaced later with something
 	that actually looks nice. Takes size and noise amplitude
 	and returns chunk vertices for use in other functions."""
@@ -24,13 +24,35 @@ def worldGen(size, amplitude=3):
 		for x in range(0, size):
 			world.append([])
 			for y in range(0,size):
-				world[x].append(worldb[int(math.floor(x/2.0))][int(math.floor(y/2.0))] + random.randint(-amplitude/4,amplitude/4))
+				z = worldb[int(math.floor(x/2.0))][int(math.floor(y/2.0))] + random.randint(-amplitude/4,amplitude/4)
+				blocks = []
+				if z < 1:
+					z = 1
+				
+				for i in range(0,z):
+					if i == (z-1):
+						if z == 1:
+							blocks.append(2)
+						else:
+							blocks.append(1)
+					else:
+						blocks.append(0)
+				
+				world[x].append(blocks)
 	elif size < 2:
 		print("WARNING: The worldsize entered is lower than the normal generator can accept! Using the legacy generator.")
 		for x in range(0, size):
 			world.append([])
 			for y in range(0,size):
-				world[x].append(random.randint(-amplitude,amplitude))
+				
+				blocks = []
+				for i in range(0,random.randint(-amplitude,amplitude)):
+					if i == (z-1):
+						blocks.append(1)
+					else:
+						blocks.append(0)
+				
+				world[x].append(blocks)
 	
 	return world
 
@@ -48,7 +70,7 @@ def resetWorldBoxes(size, basez, player_chunk_position, world, deleteids=[]):
 		for x in range(0, size):
 			for y in range(0, size):
 				shape = pybullet.createCollisionShape(pybullet.GEOM_BOX,halfExtents=[2,2,0.1])
-				boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),world[player_chunk_position][x][y]+basez],[0,0,0])
+				boxId = pybullet.createMultiBody(0,shape,-1,[(4*x),(4*y),len(world[player_chunk_position][x][y])+basez],[0,0,0])
 				boxes.append(boxId)
 	
 	return boxes

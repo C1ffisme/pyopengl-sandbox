@@ -29,7 +29,7 @@ chunksize = 16
 basez = -9
 world = {}
 view_range = 1
-chunk_view_adjustment = 4 # This is a slight multiplier to the size of the world so that it doesn't look small when the player walks on it.
+chunk_view_adjustment = 4.0 # This is a slight multiplier to the size of the world so that it doesn't look small when the player walks on it.
 
 for x in range(-5, 5):
 	for y in range(-5, 5):
@@ -40,6 +40,8 @@ print(world.keys())
 
 terrain_vbo = numpy.array([], numpy.float32)
 color_vbo = numpy.array([], numpy.float32)
+
+stos = [] # Static Terrain Objects, which appear with the terrain
 
 # Cubes, non-terrain object arrays. Using VBOs for moving objects is laggy.
 
@@ -73,6 +75,8 @@ def setup_world(world, player_chunk_position):
 	cubes.append(cubeRender.createCube([0,12,0], 1, [45,45,45]))
 	cubes.append(cubeRender.createCube([4,-4,6], 1, [0,0,0]))
 	cubes.append(cubeRender.createCube([4,5.9,9], 2, [45,30,10]))
+	
+	addSTO([18,3], 1, [0.6, 0.2, 0.1])
 
 	boxestodelete = worldGen.resetWorldBoxes(chunksize, -9, player_chunk_position, world) # We run this once to initiate the first collision boxes.
 	
@@ -172,6 +176,19 @@ def addVBOVertex(vertex, color):
 	
 	terrain_vbo = numpy.append(terrain_vbo, [vertex[0],vertex[1],vertex[2]])
 	color_vbo = numpy.append(color_vbo, [color[0],color[1],color[2]])
+	
+def addSTO(position2d, size, color):
+	chunk_x = int(math.floor(position2d[0]/chunksize))
+	chunk_y = int(math.floor(position2d[1]/chunksize))
+	
+	chunk_position = (chunk_x, chunk_y)
+	
+	x = int(position2d[0] - (chunk_x*chunksize))
+	y = int(position2d[1] - (chunk_y*chunksize))
+	z = len(world[chunk_position][x][y]) + basez + size
+	
+	
+	stos.append([(position2d[0],position2d[1],z), size, color])
 
 def recalculate_vbos(buffers, player_chunk_position, view_range):
 	global terrain_vbo
@@ -180,14 +197,14 @@ def recalculate_vbos(buffers, player_chunk_position, view_range):
 	terrain_vbo = numpy.array([], numpy.float32)
 	color_vbo = numpy.array([], numpy.float32)
 	
-	groundpoints = worldRender.groundVertices(chunksize, basez, world, player_chunk_position, view_range, chunk_view_adjustment)
-	for vertex in groundpoints:
-		sand_value = (vertex[2]-basez)/10.0
-		
-		if sand_value > 0.0:
-			addVBOVertex(vertex,(sand_value+0.2,0.5,0.2))
-		else:
-			addVBOVertex(vertex,(0.2,0.5,0.2))
+	groundpoints, topsoil = worldRender.groundVertices(chunksize, basez, world, player_chunk_position, view_range, chunk_view_adjustment)
+	for i in range(0,len(groundpoints)):
+		if topsoil[i] == 0:
+			addVBOVertex(groundpoints[i],(0.7,0.5,0.2))
+		elif topsoil[i] == 1:
+			addVBOVertex(groundpoints[i],(0.3,0.7,0.3))
+		elif topsoil[i] == 2:
+			addVBOVertex(groundpoints[i],(0.6,0.6,0.3))
 	
 	
 	glBindBuffer(GL_ARRAY_BUFFER, buffers[0])
@@ -255,25 +272,35 @@ while True:
 			if pressed_keys[pygame.K_SPACE] and not gui_active:
 				yaw, pitch, camerax, cameray, cameraz = reset_camera()
 			if pressed_keys[pygame.K_q]:
-				digx = int(float(camerax)/4.0)
-				digy = int(float(cameray)/4.0)
+				digx = int(float(camerax)/chunk_view_adjustment)
+				digy = int(float(cameray)/chunk_view_adjustment)
 				chunk = world[player_chunk_position]
 				if digx < len(chunk) -1:
 					if digy < len(chunk[digx]) -1:
-						world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] - 1
-						inventory.add_to_inv(player_inventory, "dirt")
+						if len(world[player_chunk_position][digx][digy]) != 1:
+							if world[player_chunk_position][digx][digy][-1] == 1 or world[player_chunk_position][digx][digy][-1] == 0:
+								inventory.add_to_inv(player_inventory, "dirt")
+							elif world[player_chunk_position][digx][digy][-1] == 2:
+								inventory.add_to_inv(player_inventory, "sand")
+						
+							del world[player_chunk_position][digx][digy][-1]
+						else:
+							world[player_chunk_position][digx][digy][-1] = 2
 				
 				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 				recalculate_vbos(buffers, player_chunk_position, view_range)
 			if pressed_keys[pygame.K_e]:
-				digx = int(float(camerax)/4.0)
-				digy = int(float(cameray)/4.0)
+				digx = int(float(camerax)/chunk_view_adjustment) - player_chunk_position[0]*chunksize
+				digy = int(float(cameray)/chunk_view_adjustment) - player_chunk_position[1]*chunksize
 				chunk = world[player_chunk_position]
 				if digx < len(chunk) -1:
 					if digy < len(chunk[digx]) -1:
 						if inventory.inv_contains(player_inventory, "dirt"):
-							world[player_chunk_position][digx][digy] = world[player_chunk_position][digx][digy] + 1
+							world[player_chunk_position][digx][digy].append(0)
 							inventory.remove_from_inv(player_inventory, "dirt")
+						elif inventory.inv_contains(player_inventory, "sand"):
+							world[player_chunk_position][digx][digy].append(2)
+							inventory.remove_from_inv(player_inventory, "sand")
 				
 				boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 				recalculate_vbos(buffers, player_chunk_position, view_range)
@@ -310,7 +337,7 @@ while True:
 	
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 	
-	player_chunk_position = (round(camerax/(chunksize*4)), round(cameray/(chunksize*4)))
+	player_chunk_position = (round(camerax/(chunksize*chunk_view_adjustment)), round(cameray/(chunksize*chunk_view_adjustment)))
 	if player_chunk_position != last_player_chunk_position:
 		boxestodelete = worldGen.resetWorldBoxes(chunksize, basez, player_chunk_position, world, boxestodelete)
 		recalculate_vbos(buffers, player_chunk_position, view_range)
@@ -323,7 +350,9 @@ while True:
 	
 	renderLoop.vbo_render(program, buffers, len(terrain_vbo)/3)
 	renderLoop.render_loop(program, cubes)
-	# text_collection.render() Laggy and problematic
+	for sto in stos:
+		renderLoop.static_render_loop(program, sto[0], sto[1], sto[2])
+	#text_collection.render() #Laggy and problematic
 	if gui_active:
 		renderLoop.gui_render(gui_program, gui_v, gui_c)
 	

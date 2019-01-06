@@ -29,7 +29,7 @@ def remove_from_inv(inventory, item):
 	return inventory
 
 def get_inv_image(item):
-	colors = {"none":[0.7,0.7,0.7],"dirt":[0.5,0.3,0.1]}
+	colors = {"none":[0.7,0.7,0.7],"dirt":[0.5,0.3,0.1],"sand":[0.7,0.7,0.3]}
 	
 	return colors[item]
 

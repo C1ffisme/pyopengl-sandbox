@@ -60,6 +60,48 @@ def render_loop(program, cubes):
 	
 	glDepthRange(0.0, 1.0)
 	
+def static_render_loop(program, position, size, color):
+	"""This is the render loop for static terrain objects. It's basically the same as the cubes,
+	but without the movement stuff."""
+	
+	glDepthRange(0.02, 1.0) # This is important so that text is not rendered over.
+	
+	glEnableVertexAttribArray(0)
+	glEnableVertexAttribArray(1)
+
+	glBindAttribLocation(program, 0, "a_Position")
+	glBindAttribLocation(program, 1, "a_Color")
+	
+	cubepoints = cubeRender.cubeVertices(size)
+	
+	vertex_array = numpy.array([], numpy.float32)
+	color_array = numpy.array([], numpy.float32)
+	
+	for vertex in cubepoints:
+		vertex_array = numpy.append(vertex_array, [vertex[0],vertex[1],vertex[2]])
+		color_array = numpy.append(color_array, color)
+	
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_array)
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, color_array)
+
+	glUseProgram(program)
+	
+	glMatrixMode(GL_MODELVIEW)
+	
+	glPushMatrix()
+		
+	glTranslatef(position[0], position[1], position[2])
+	
+	glDrawArrays(GL_TRIANGLES, 0, len(cubepoints))
+	
+	glPopMatrix()
+	
+	glDisableVertexAttribArray(0)
+	glDisableVertexAttribArray(1)
+	glUseProgram(0)
+	
+	glDepthRange(0.0, 1.0)
+	
 def vbo_render(program, buffers, num_vertices):
 	"""This renders the VBOs."""
 	glDepthRange(0.02, 1.0)
